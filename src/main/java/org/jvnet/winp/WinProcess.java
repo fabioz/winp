@@ -39,7 +39,7 @@ public class WinProcess extends AbstractProcess {
     /**
      * Wraps {@link Process} into {@link WinProcess}.
      */
-    public WinProcess(Process proc) throws Exception{
+    public WinProcess(Process proc) throws RuntimeException {
         this(getProcessPid(proc));
     }
 
