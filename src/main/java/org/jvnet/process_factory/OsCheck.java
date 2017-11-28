@@ -13,12 +13,12 @@ public final class OsCheck {
     Windows, MacOS, Linux, Other
   };
 
-  protected static OSType detectedOS;
+  private static OSType detectedOS;
 
   /**
    * detected the operating system from the os.name System property and cache
    * the result
-   * 
+   *
    * @returns - the operating system detected
    */
   public static OSType getOperatingSystemType() {
