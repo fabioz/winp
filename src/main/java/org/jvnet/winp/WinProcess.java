@@ -1,6 +1,7 @@
 package org.jvnet.winp;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Comparator;
 import java.util.TreeMap;
 import java.util.Iterator;
@@ -8,6 +9,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
+
+import org.jvnet.process_factory.AbstractProcess;
 
 /**
  * Represents a Windows process.
@@ -20,8 +23,7 @@ import static java.util.logging.Level.FINE;
  *
  * @author Kohsuke Kawaguchi
  */
-public class WinProcess {
-    private final int pid;
+public class WinProcess extends AbstractProcess {
 
     // these values are lazily obtained, in a pair
     private String commandline;
@@ -30,19 +32,40 @@ public class WinProcess {
     /**
      * Wraps a process ID.
      */
-    public WinProcess(int pid) {
-        this.pid = pid;
+    public WinProcess(long pid) {
+    	super(pid);
     }
 
     /**
      * Wraps {@link Process} into {@link WinProcess}.
      */
-    public WinProcess(Process proc) {
-        try {
+    public WinProcess(Process proc) throws Exception{
+        this(getProcessPid(proc));
+    }
+
+	private static int getProcessPid(Process proc) {
+		try {
+			// On java 9, we have a Process.pid() method
+			// Use through reflection because we have to support previous versions
+			// of java too.
+			try {
+				Method m = Process.class.getDeclaredMethod("pid");
+				m.setAccessible(true);
+				Object pid = m.invoke(proc);
+				if(pid instanceof Integer) {
+					return ((Integer) pid).intValue();
+				}
+				if(pid instanceof Long) {
+					return ((Long) pid).intValue();
+				}
+			} catch (Throwable e) {
+				// just ignore (not java 9).
+			}
+
             Field f = proc.getClass().getDeclaredField("handle");
             f.setAccessible(true);
             int handle = ((Number)f.get(proc)).intValue();
-            pid = Native.getProcessId(handle);
+            return Native.getProcessId(handle);
         } catch (NoSuchFieldException e) {
             throw new NotWindowsException(e);
         } catch (IllegalAccessException e) {
@@ -54,32 +77,32 @@ public class WinProcess {
     public String toString() {
         return "WinProcess pid#" + pid + " - " + commandline;
     }
-    
+
     /**
      * Gets the process ID.
      */
-    public int getPid() {
+    public long getPid() {
         return pid;
     }
 
     /**
      * Kills this process and all the descendant processes that
-     * this process launched. 
+     * this process launched.
      */
     public void killRecursively() {
         if (LOGGER.isLoggable(FINE))
             LOGGER.fine(String.format("Attempting to recursively kill pid=%d (%s)",pid,getCommandLine()));
-        Native.kill(pid,true);
+        Native.kill((int)pid,true);
     }
 
     public void kill() {
         if (LOGGER.isLoggable(FINE))
             LOGGER.fine(String.format("Attempting to kill pid=%d (%s)",pid,getCommandLine()));
-        Native.kill(pid,false);
+        Native.kill((int)pid,false);
     }
 
     public boolean isCriticalProcess() {
-        return Native.isCriticalProcess(pid);
+        return Native.isCriticalProcess((int)pid);
     }
 
     /**
@@ -89,7 +112,7 @@ public class WinProcess {
      *      One of the values from {@link Priority}.
      */
     public void setPriority(int priority) {
-        Native.setPriority(pid,priority);
+        Native.setPriority((int)pid,priority);
     }
 
     /**
@@ -99,7 +122,7 @@ public class WinProcess {
      * The tokenization semantics is up to applications.
      *
      * @throws WinpException
-     *      If Winp fails to obtain the command line. 
+     *      If Winp fails to obtain the command line.
      *      The process may be dead or there is not enough security privileges.
      */
     public synchronized String getCommandLine() {
@@ -116,7 +139,7 @@ public class WinProcess {
      * The returned map has a case-insensitive comparison semantics.
      *
      * @return
-     *      Never null. 
+     *      Never null.
      *
      * @throws WinpException
      *      If Winp fails to obtain the environment variables.
@@ -129,15 +152,15 @@ public class WinProcess {
     }
 
     private void parseCmdLine() throws WinpException {
-        String s = Native.getCmdLine(pid);
+        String s = Native.getCmdLine((int)pid);
         if(s == null) {
-            throw new WinpException("Failed to obtain command line for PID = " + pid); 
+            throw new WinpException("Failed to obtain command line for PID = " + pid);
         }
         commandline = s;
     }
-    
+
     private void parseCmdLineAndEnvVars() {
-        String s = Native.getCmdLineAndEnvVars(pid);
+        String s = Native.getCmdLineAndEnvVars((int)pid);
         if(s==null)
             throw new WinpException("Failed to obtain for PID="+pid);
         int sep = s.indexOf('\0');
@@ -148,7 +171,7 @@ public class WinProcess {
         while(s.length()>0) {
             sep = s.indexOf('\0');
             if(sep==0)  return;
-            
+
             String t;
             if(sep==-1) {
                 t = s;

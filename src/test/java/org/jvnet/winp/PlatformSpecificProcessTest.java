@@ -50,26 +50,26 @@ import org.jvnet.winp.util.TestHelper;
  */
 @RunWith(Parameterized.class)
 public class PlatformSpecificProcessTest extends ProcessSpawningTest {
-    
-    private final ExecutablePlatform executablePlatform; 
-    
+
+    private final ExecutablePlatform executablePlatform;
+
     public PlatformSpecificProcessTest(ExecutablePlatform p) {
         executablePlatform = p;
     }
-    
+
     @Before
     public void verifyTargetPlatform() {
-        
+
         // Run 64bit tests only if the platform supports it
         if (executablePlatform == ExecutablePlatform.X64) {
             TestHelper.assumeIs64BitHost();
         }
-        
+
         File exec = getTestAppExecutable(executablePlatform);
         System.out.println("Target executable: " + exec.getAbsolutePath());
         Assert.assertTrue("Cannot locate the required executable: " + exec.getAbsolutePath(), exec.exists());
     }
-    
+
     @Test
     public void shouldKillProcessCorrectly() throws Exception {
         Process p = spawnTestApp();
@@ -79,19 +79,19 @@ public class PlatformSpecificProcessTest extends ProcessSpawningTest {
         Thread.sleep(100);
         wp.killRecursively();
     }
-    
+
     @Test
     public void shouldNotBeCritical() throws Exception {
         Process p = spawnTestApp();
         WinProcess wp = new WinProcess(p);
         assertFalse("The spawned process should not be critical to the system", wp.isCriticalProcess());
     }
-    
+
     @Test
     public void getCommandLine_shouldNotFailIfTheProcessIsDead() throws Exception {
         Process p = spawnTestApp();
         WinProcess wp = new WinProcess(p);
-        int pid = wp.getPid();
+        long pid = wp.getPid();
         wp.killRecursively();
         Thread.sleep(1000);
         assertFalse("The process has not been stopped yet", isAlive(p));
@@ -103,19 +103,19 @@ public class PlatformSpecificProcessTest extends ProcessSpawningTest {
             assertThat(ex.getWin32ErrorCode(), equalTo(UserErrorType.PROCESS_IS_NOT_RUNNING.getSystemErrorCode()));
             return;
         }
-        
+
         Assert.fail("Expected WinpException since the process is killed");
     }
-    
+
     @Test
     public void getEnvironmentVariables_shouldFailIfTheProcessIsDead() throws Exception {
         Process p = spawnTestApp();
         WinProcess wp = new WinProcess(p);
-        int pid = wp.getPid();
+        long pid = wp.getPid();
         wp.killRecursively();
         Thread.sleep(1000);
         assertFalse("The process has not been stopped yet", isAlive(p));
-        
+
         try {
             new WinProcess(p).getEnvironmentVariables();
         } catch (WinpException ex) {
@@ -123,21 +123,21 @@ public class PlatformSpecificProcessTest extends ProcessSpawningTest {
             assertThat(ex.getWin32ErrorCode(), equalTo(UserErrorType.PROCESS_IS_NOT_RUNNING.getSystemErrorCode()));
             return;
         }
-        
+
         Assert.fail("Expected WinpException since the process is killed");
     }
-    
+
     private Process spawnTestApp() throws IOException, InterruptedException {
         return spawnProcess(getTestAppExecutable(executablePlatform).getAbsolutePath());
     }
-    
+
     private String getExpectedPEBName(boolean processIsRunning) {
         // We cannot read Wow64 Process info from the terminated process, hence PEB32 structure won't be discovered
         return (executablePlatform == ExecutablePlatform.X86 && processIsRunning) ? "PEB32" : "PEB";
     }
-    
+
     @Parameters
     public static Collection<Object[]> data() {
-        return Arrays.asList(new Object[][] { {ExecutablePlatform.X64}, {ExecutablePlatform.X86}});  
+        return Arrays.asList(new Object[][] { {ExecutablePlatform.X64}, {ExecutablePlatform.X86}});
     }
 }

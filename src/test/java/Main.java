@@ -1,3 +1,5 @@
+import org.jvnet.process_factory.AbstractProcess;
+import org.jvnet.process_factory.ProcessFactory;
 import org.jvnet.winp.WinProcess;
 import org.jvnet.winp.Priority;
 
@@ -6,8 +8,8 @@ import org.jvnet.winp.Priority;
  * @author Kohsuke Kawaguchi
  */
 public class Main {
-    public static void main(String[] args) {
-        WinProcess p = new WinProcess(Integer.parseInt(args[0]));
+    public static void main(String[] args) throws Exception {
+        AbstractProcess p = ProcessFactory.createProcess(Integer.parseInt(args[0]));
         p.killRecursively();
         // p.setPriority(Priority.BELOW_NORMAL);
     }
