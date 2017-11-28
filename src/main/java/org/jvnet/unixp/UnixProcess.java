@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashSet;
 import java.util.StringTokenizer;
 
@@ -140,9 +141,9 @@ public class UnixProcess extends AbstractProcess {
 		}
 
 		InputStreamReader inputStream = new InputStreamReader(
-				new BufferedInputStream(process.getInputStream()));
+				new BufferedInputStream(process.getInputStream()), StandardCharsets.UTF_8);
 		InputStreamReader errorStream = new InputStreamReader(
-				new BufferedInputStream(process.getErrorStream()));
+				new BufferedInputStream(process.getErrorStream()), StandardCharsets.UTF_8);
 
 		try {
 			// Wait for it to finish
