@@ -2,7 +2,7 @@
 skip_tags: true
 skip_branch_with_pr: true
 
-version: 1.25.0.{build}-SNAPSHOT
+version: 1.26.0.{build}-SNAPSHOT
 
 # MVS Project configuration
 image: Visual Studio 2013
@@ -19,15 +19,15 @@ install:
   - cmd: choco install maven -y -f
   - cmd: refreshenv
 
-# Build and test  
+# Build and test
 build_script:
   - .\build.cmd cleanbuild Release %APPVEYOR_BUILD_VERSION%
-  - ps: Get-ChildItem target\winp-$env:APPVEYOR_BUILD_VERSION.jar | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name } 
+  - ps: Get-ChildItem target\winp-$env:APPVEYOR_BUILD_VERSION.jar | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name }
   - .\build.cmd cleanbuild Debug %APPVEYOR_BUILD_VERSION%-Debug
-  - ps: Get-ChildItem target\winp-$env:APPVEYOR_BUILD_VERSION-Debug.jar | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name } 
+  - ps: Get-ChildItem target\winp-$env:APPVEYOR_BUILD_VERSION-Debug.jar | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name }
 
 on_finish:
-# TODO: enable once there are tests, implement aggregator somehow 
+# TODO: enable once there are tests, implement aggregator somehow
 # - ps: (new-object net.webclient).UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\tests.xml))
 
 artifacts:
@@ -52,4 +52,4 @@ artifacts:
 #JARs are pushed above
 #FindBugs
   - path: 'target/findbugs.xml'
-    name: findbugs.xml 
+    name: findbugs.xml

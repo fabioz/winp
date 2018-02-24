@@ -6,6 +6,8 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.StringTokenizer;
 
@@ -61,7 +63,7 @@ public class UnixProcess extends AbstractProcess {
 
 	@Override
 	public void kill() throws IOException {
-		runAndGetOutput(new String[] { "kill", "-KILL",
+		runNoWait(new String[] { "kill", "-KILL",
 				Long.toString(pid) });
 	}
 
@@ -72,12 +74,12 @@ public class UnixProcess extends AbstractProcess {
 	 *
 	 * @throws IOException
 	 */
-	private static void killRecursively(long pid, LinkedHashSet<Long> listed)
+	private static void stopAndListRecursively(long pid, LinkedHashSet<Long> listed)
 			throws IOException {
 		listed.add(pid);
 
 		// When listing, before getting the children, ask to stop forking
-		runAndGetOutput(new String[] { "kill", "-stop", Long.toString(pid) });
+		runNoWait(new String[] { "kill", "-STOP", Long.toString(pid) });
 
 		// Now, get the children
 		Output outputPGrep = runAndGetOutput("pgrep", "-P",
@@ -87,17 +89,13 @@ public class UnixProcess extends AbstractProcess {
 			throw new RuntimeException(outputPGrep.stderr);
 		}
 
-		// When the children are gotten actually go on and forcefully kill the
-		// parent
-		runAndGetOutput("kill", "-KILL", Long.toString(pid));
-
 		String ids = outputPGrep.stdout;
 		StringTokenizer strTok = new StringTokenizer(ids);
 		while (strTok.hasMoreTokens()) {
 			String nextToken = strTok.nextToken();
 			long found = Long.parseLong(nextToken);
 			if (!listed.contains(found)) {
-				killRecursively(found, listed);
+				stopAndListRecursively(found, listed);
 			}
 		}
 	}
@@ -113,7 +111,14 @@ public class UnixProcess extends AbstractProcess {
 	private static LinkedHashSet<Long> killRecursively(long pid)
 			throws IOException {
 		final LinkedHashSet<Long> listed = new LinkedHashSet<Long>();
-		killRecursively(pid, listed);
+		stopAndListRecursively(pid, listed);
+		ArrayList<Long> lst = new ArrayList<>(listed);
+		Collections.reverse(lst); // Kill children before parents
+		for (Long cPid : lst) {
+			runNoWait("kill", "-KILL", Long.toString(cPid));
+		}
+
+
 		return listed;
 	}
 
@@ -121,6 +126,11 @@ public class UnixProcess extends AbstractProcess {
 			throws IOException {
 		Process createProcess = Runtime.getRuntime().exec(cmdarray, null, null);
 		return getProcessOutput(createProcess);
+	}
+
+	private static void runNoWait(String... cmdarray)
+			throws IOException {
+		Runtime.getRuntime().exec(cmdarray, null, null);
 	}
 
 	private static class Output {
