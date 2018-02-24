@@ -112,7 +112,7 @@ public class UnixProcess extends AbstractProcess {
 			throws IOException {
 		final LinkedHashSet<Long> listed = new LinkedHashSet<Long>();
 		stopAndListRecursively(pid, listed);
-		ArrayList<Long> lst = new ArrayList<>(listed);
+		ArrayList<Long> lst = new ArrayList<Long>(listed);
 		Collections.reverse(lst); // Kill children before parents
 		for (Long cPid : lst) {
 			runNoWait("kill", "-KILL", Long.toString(cPid));
